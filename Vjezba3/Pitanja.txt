@@ -1,0 +1,3 @@
+1.client_socket.connect((host,port)) govori klijentu na koju će se adresu povezati te na koji port odnosno na koji socket.
+
+2.Drugi broj u zagradama kod ispisa "Got connection from" označava port našeg servera.
