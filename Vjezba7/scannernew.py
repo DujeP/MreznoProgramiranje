@@ -1,87 +1,57 @@
-
 import socket
+import multiprocessing
 from multiprocessing import Pool
-import time
-import sys
+import threading
+import datetime
+pocetak = datetime.datetime.now()
+from queue import Queue
+print("Program se izvodi na ovom racunalu:")
+print(datetime.datetime.now())
 
-openPorts = []  #
-scannedPorts = []
+from local_machine_info import print_machine_info
 
-try:
-    ip = sys.argv[1]  # python script.py IP
-except IndexError:
-    print("[!] Error: No IP Entered")
-    print("\n[+] Syntax: python portscan.py IP")
-    sys.exit()
+print_machine_info()
+print("----------------------------------------------")
 
-def banner():
-    """ Banner Message"""
-    banner = """
-=====================Port Scanner====================
-    Multiprocessing Port Scanner and Banner Check    
-=====================================================
-Syntax: python portscan.py IP
-e.g python portscan.py 192.168.1.8
-    """
-    return banner
-
-def portScan(port):
-    """ Checks open port"""
+def scan(info):
+    target_ip, port = info
+    
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(3)
+    
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.3)  # Timeout
-        pcheck = s.connect_ex((str(ip), port))
-        if pcheck == 0:  # If pcheck response = 0, It means the port is open
-            openPorts.append(port) # Append the open ports to openPorts
-            return pcheck   # Returns pcheck to be used in main()
-        s.close()  # Close the socket ~ important!
-    except socket.error as e: # Error Exceptions
-        pass
-        # print(e)
+        sock.connect((target_ip,port))
+        sock.close()
+        
+        return port, True
+    
+    except (socket.timeout, socket.error):
+        return port, False
 
+if __name__ == '__main__':
+    pocetak = datetime.datetime.now()
+    
+    sk = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    
+    target = input("Unesite adresu hosta kojeg zelite skenirati: ")
+    print("Skeniram adresu: ",target)
 
-def bannerGrab(port):
-    """ Retrieves Banner Message from Service if it exists"""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(5)  # Timeout for banner check
-        s.connect((str(ip), port))  # Connect to the IP
-        bann = s.recv(50)
-        return bann  # Returns the banner massage
-    except socket.error as e:
-        # print("Error: %s" % e)
-        pass
+    print("Unesite od kojeg do kojeg porta zelite skenirati...")
 
+    p1 = input("Prvi port => ")
+    p2 = input("Drugi port => ")
 
-def main(port):
-    """ Runs the main script"""
-    if portScan(port) == 0:
-        print("[+] Port Open: %d" % port)
-
-        if bannerGrab(port):  # If port is open, check for banner message
-            print("  [-] Port %d Banner: %s" % (port, str(bannerGrab(port))))
-    else:
-        pass
-
-
-
-if __name__ == "__main__":  # Initates the main script
-    print(banner())  # Print our banner message
-    tstart = time.time()  # Start timing
-    print("[+] Reading Ports from File")
-    #newPorts = open("portnum.txt", "r").read().splitlines()
-    newPorts = range(1, 65536)  # All ports
-    print("[+] Starting up the engines!\n")
-    print("[+] Scanning IP Address: %s" % ip)
-    print("[+] Scanning %d Ports" % len(newPorts))
-
-    with Pool(processes=40) as pool:
-# Starts 40 Processes, It isn't bad on memory, we can use many
-        for i in pool.imap_unordered(main, [int(p) for p in newPorts]):
-            if i:
-                continue
-            else:
-                pass
-
-    tend = time.time() - tstart  # End Timer
-    print("\n[+] Finished in %d Seconds" % tend)
+    p1 = int(p1)
+    p2 = int(p2)
+    
+    ports = range(p1,p2)
+    lista = [(target,port) for port in ports]
+    
+    pool = Pool(multiprocessing.cpu_count()*2)
+    
+    for port, status in pool.imap(scan, lista):
+        if status:
+            print('Port' , port, ' je otvoren!!!')
+    
+    kraj = datetime.datetime.now()
+    print('Vrijeme potrebno za izvedbu: {}'.format(kraj - pocetak))
